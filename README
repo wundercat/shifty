@@ -1,0 +1,10 @@
+
+Bike helmet display.
+
+The .ino and .h file are for use with the Arduino IDE which requires Java.
+
+You could also use (I did)  sudar's Arduino command-line makefile
+https://github.com/sudar/Arduino-Makefile/
+My home PC runs Debian so I followed these instructions
+http://playground.arduino.cc/Linux/Debian
+

@@ -1,41 +1,18 @@
 
-#include "shifty.h"
 
-unsigned char inportBpins(){
-  unsigned char  captured;
-  asm volatile(     "in %0,0x03\n\t"  : "=r"(captured) );
-  return captured;
-}
+
 
 /*
+   A dot is represented by a bit pattern, 1 means on.
    A dot shifts across the LED array by jumping from one position to the next.
    After jumping, it glows only for its "on" duration, then blanks.
    After traversing the array, it stalls for a while before beginning again.
    The period between jumps slowly increases until it hits a final value,
    which resets it to an initial value.
-   A dot is represented by a bit pattern, 1 means on.
  */
 #define Nd 2  //  Number of dots
-   
-struct dotz {
-  // bit patterns
-  short initialSprite[Nd];
-  short sprite[Nd];
-  short previousSprite[Nd];
-  short mask[Nd];
-  short stallMask[Nd];
-  //durations
-  short initialTickPeriod[Nd];
-  short currentTickPeriod[Nd];
-  short finalTickPeriod[Nd];
-  short blankAfter[Nd];
-  short stallDuration[Nd];
-  //timers
-  short jumpTimer[Nd];
-  short stallTimer[Nd];
-  short onTimer[Nd];
-};
-typedef struct dotz DOTZ;
+#include "shifty.h"
+ 
 static DOTZ d;
 
 
@@ -58,10 +35,8 @@ void setup(){
   led13off();
 
   //  starting patterns
-  d.initialSprite[0]=  0x0003;
-  d.sprite[0] = d.initialSprite[0];
-  d.initialSprite[1]=  0x0030;
-  d.sprite[1] = d.initialSprite[1];
+  d.initialSprite[0]=  0x0001;
+  d.initialSprite[1]=  0x0010;
   d.previousSprite[0]=  0x0000;
   d.previousSprite[1]=  0x0000;
   d.mask[0] = 0xffff  ;
@@ -72,20 +47,22 @@ void setup(){
   //durations, in times around loop() 
   d.initialTickPeriod[0] = 1200  ;
   d.finalTickPeriod[0] = 2000 ;
-  d.blankAfter[0] = 1000   ;
-  d.stallDuration[0] = 20000;
+  d.blankAfter[0] = 600   ;
+  d.stallDuration[0] = 20;
   d.jumpTimer[0] = 1;
   d.onTimer[0] = 1;
   d.stallTimer[0] = 0;
 
-  d.initialTickPeriod[1] =  2000  ;
-  d.finalTickPeriod[1] = 5000 ;
-  d.blankAfter[1] = 1000   ;
-  d.stallDuration[1] = 11400;
+  d.initialTickPeriod[1] =  1200  ;
+  d.finalTickPeriod[1] = 1500 ;
+  d.blankAfter[1] = 500   ;
+  d.stallDuration[1] = 100;
   d.jumpTimer[1] = 1;
   d.onTimer[1] = 1;
   d.stallTimer[1] = 0;
 
+  d.sprite[0] = d.initialSprite[0];
+  d.sprite[1] = d.initialSprite[1];
   d.currentTickPeriod[0] = d.initialTickPeriod[0];
   d.currentTickPeriod[1] = d.initialTickPeriod[1];
 }
@@ -99,6 +76,7 @@ int analogReadPeriod = 100;
 /* free running timers */
 int pwmCycleTimer =1;
 int analogReadCounter = 1;
+unsigned char debug = 0;
 
 /* one shot timers */
 int pwmOnTimer =2 ;
@@ -115,6 +93,12 @@ int recordHigh=501;
  */
 void display16( unsigned short toshiftreg ){
   unsigned char ix;
+  
+  if(debug++ & 0x80){
+    led13on();
+  }else{
+    led13off();
+  }
   
   for( ix=8 ; ix > 0; ix-- ){
     if(toshiftreg & 0x0001){ deeHigh() }else{ deeLow() };
@@ -185,10 +169,10 @@ void pwmCycleTimerService(){
 }
 
 void analogReadCounterService(){
-  short potvalue;
+  short rheostat;
 
-  potvalue = analogRead( potwiper );
-  pwmOnDuration = (potvalue / 10) + 1 ; 
+  rheostat = analogRead( rheostatWiper ); // range 0 to 1023
+  pwmOnDuration = (rheostat / 10) + 1 ; 
   analogReadCounter = analogReadPeriod;
 }
 
@@ -235,9 +219,9 @@ void loop(){
   {
     ;
   }
-led13on() ; // delay(100);
+ //  delay(1);
  //   driveenable(); 
-led13off() ; //  delay(100);
+ //   delay(1);
 //    drivedisable();
 
   if( displayImage != previousDisplayImage ){
